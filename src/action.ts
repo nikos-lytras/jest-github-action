@@ -114,22 +114,41 @@ const summaryToRow = (f: CoverageSummary) => [
   formatIfPoor(f.lines.pct!),
 ];
 
-function toHTMLTable(headers: string[], rows: string[][]): string
+function toHTMLTable(headers: string[], rows: string[][], charLimit = Infinity): string
 {
-    const headerHtml = toHTMLTableRow([headers], cell => `<th>${cell}</th>`, 'thead');
-    const bodyHtml = toHTMLTableRow(rows, (cell, i) => `<td${i > 0 ? ' nowrap="nowrap" align="right"' : ''}>${cell}</td>`, 'tbody');
+    const openingTag = '<table width="100%">';
+    const closingTag = '</table>';
+    const headerHtml = toHTMLTableRow([headers], cell => `<th>${cell}</th>`, 'thead', Infinity);
+    const remainingChars = charLimit === Infinity ? Infinity : charLimit - (openingTag.length + closingTag.length + headerHtml.length);
+    const bodyHtml = toHTMLTableRow(rows, (cell, i) => `<td${i > 0 ? ' nowrap="nowrap" align="right"' : ''}>${cell}</td>`, 'tbody', remainingChars);
 
     return [
-        '<table width="100%">',
+        openingTag,
         headerHtml,
         bodyHtml,
-        '</table>',
+        closingTag,
     ].join("");
 }
 
-function toHTMLTableRow(rows: string[][], formatCellCB: (cell: string, i: number) => string, wrapperElement: string): string
+function toHTMLTableRow(rows: string[][], formatCellCB: (cell: string, i: number) => string, wrapperElement: string, charLimit: number): string
 {
-    return `<${wrapperElement}>${rows.map(row => `<tr>${row.map(formatCellCB).join("")}</tr>`).join("")}</${wrapperElement}>`;
+    const openingTag = `<${wrapperElement}>`;
+    const closingTag = `</${wrapperElement}>`;
+    let charCount = openingTag.length + closingTag.length;
+    let truncated = false;
+    return `${openingTag}${rows.map(row => { 
+      const rowTag = `<tr>${row.map(formatCellCB).join("")}</tr>`;
+      charCount += rowTag.length;
+      if (charCount <= charLimit) {
+        return rowTag;
+      }
+      if (truncated) {
+        return "";
+      }
+      truncated = true;
+      const dummyRow = ["truncated..."].concat(Array(Math.max((rows[0] ?? []).length - 1, 0)).fill(""));
+      return `<tr>${dummyRow.map(formatCellCB).join("")}</tr>`;
+    }).join("")}${closingTag}`;
 }
 
 const groupByPath = (dirs: { [key: string]: File[] }, file: File) => {
@@ -200,7 +219,7 @@ export function getCoverageTable(
             ])),
         ])
         .flat();
-  const fullTable = toHTMLTable(fullHeaders, rows);
+  const fullTable = toHTMLTable(fullHeaders, rows, CHAR_LIMIT);
 
   const lines = [
     COVERAGE_HEADER,
