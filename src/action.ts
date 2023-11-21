@@ -8,7 +8,7 @@ import flatMap from "lodash/flatMap"
 import filter from "lodash/filter"
 import strip from "strip-ansi"
 import { createCoverageMap, CoverageMapData, CoverageSummary } from "istanbul-lib-coverage"
-import type { FormattedTestResults } from "@jest/test-result/build/types"
+import type { FormattedTestResults } from "@jest/test-result/build"
 
 const ACTION_NAME = "jest-github-action"
 const COVERAGE_HEADER = "# :open_umbrella: Code Coverage";
@@ -321,7 +321,7 @@ function getSha(): string {
 const getAnnotations = (
   results: FormattedTestResults,
   cwd: string,
-): Object[] => {
+): NonNullable<RestEndpointMethodTypes["checks"]["create"]["parameters"]["output"]>["annotations"] => {
   if (results.success) {
     return []
   }
